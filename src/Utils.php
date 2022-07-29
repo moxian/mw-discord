@@ -45,8 +45,9 @@ class DiscordUtils {
 	/**
 	 * Handles sending a webhook to Discord using cURL
 	 */
-	public static function handleDiscord ($hookName, $msg) {
+	public static function handleDiscord ($hookName, $msg, $title = NULL) {
 		global $wgDiscordWebhookURL, $wgDiscordEmojis, $wgDiscordUseEmojis, $wgDiscordPrependTimestamp, $wgDiscordUseFileGetContents;
+		global $wgDiscordPrefixWebhookURLs;
 
 		if ( !$wgDiscordWebhookURL ) {
 			// There's nothing in here, so we won't do anything
@@ -55,13 +56,24 @@ class DiscordUtils {
 
 		$urls = [];
 
-		if ( is_array( $wgDiscordWebhookURL ) ) {
-			$urls = array_merge($urls, $wgDiscordWebhookURL);
-		} else if ( is_string($wgDiscordWebhookURL) ) {
-			$urls[] = $wgDiscordWebhookURL;
-		} else {
-			wfDebugLog( 'discord', 'The value of $wgDiscordWebhookURL is not valid and therefore no webhooks could be sent.' );
-			return false;
+		$foundAny = false;
+		if( is_array( $wgDiscordPrefixWebhookURLs ) && !is_null($title) ){
+			foreach($wgDiscordPrefixWebhookURLs as $prefix => $hook){
+				if(str_starts_with($title->getPrefixedText(), $prefix)){
+						$urls[] = $hook;
+						$foundAny = true;
+				}
+			}
+		}
+		if( !$foundAny ){  // if there's no specific url found - send it to the default
+			if ( is_array( $wgDiscordWebhookURL ) ) {
+				$urls = array_merge($urls, $wgDiscordWebhookURL);
+			} else if ( is_string($wgDiscordWebhookURL) ) {
+				$urls[] = $wgDiscordWebhookURL;
+			} else {
+				wfDebugLog( 'discord', 'The value of $wgDiscordWebhookURL is not valid and therefore no webhooks could be sent.' );
+				return false;
+			}
 		}
 
 		// Strip whitespace to just one space
